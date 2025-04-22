@@ -7,7 +7,7 @@
 > 3. Get All User Details
 > 4. Delete User By Id
 > 5. Update User By Id
-> 6. All input field validation
+> 6. implementing filed validation and pagination. 
 
 ## Tech Stack
 - Java -17
@@ -64,7 +64,7 @@ user this data for checking purpose.
 >    - **Global Exception** - ApplicationException, ResourceNotFoundError (class)
 >      
 > 2. add jpa, Swagger, mysql connector etc dependency in pom.xml file.
-> 3. Configure mysql database configuration in application.yml file.
+> 3. Configure MYSQL database configuration in application.yml file.
 > 4. Create User class inside entity Package.
 > 5. Create User Repository class inside Repository package.
 > 6. Create User Service interface and User Service Class inside the service package.
@@ -74,45 +74,49 @@ user this data for checking purpose.
 
 ## Important Dependency to be used
 ```xml
-<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-data-jpa</artifactId>
+	</dependency>
 
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.3.0</version> <!-- Latest version -->
-		</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-validation</artifactId>
+	</dependency>
+
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-web</artifactId>
+	</dependency>
+
+	<dependency>
+		<groupId>org.springdoc</groupId>
+		<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+		<version>2.3.0</version> <!-- Latest version -->
+	</dependency>
 		
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-devtools</artifactId>
+		<scope>runtime</scope>
+		<optional>true</optional>
+	</dependency>
+
+	<dependency>
+		<groupId>com.mysql</groupId>
+		<artifactId>mysql-connector-j</artifactId>
+		<scope>runtime</scope>
+	</dependency>
+
+	<dependency>
+		<groupId>org.projectlombok</groupId>
+		<artifactId>lombok</artifactId>
+		<optional>true</optional>
+	</dependency>
 ```
 
-## Configure mysql database configuration in application.yml file
-```ymal
+## Configure MYSQL database configuration in application.yml file.
+```yaml
 server:
   port: 8081
 
@@ -186,368 +190,277 @@ public class User {
 }
 ```
 
-## Create StudentRepository interface in repository package.
+## Create User Repository class inside Repository package.
 
-```
+```java
 @Repository
-public interface StudentRepository extends JpaRepository<Student, Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
+
     boolean existsByMobile(String mobile);
-    List<Student> findByFullNameContainingIgnoreCase(String fullname);
+
+    List<User> findByFullNameContainingIgnoreCase(String name);
+}
+```
+
+## Create User Service interface and User Service Class inside the service package.
+
+### *UserService*
+```java
+public interface UserService {
+
+    public UserDto createUser(User user);
+
+    public Page<UserDto> getAllUser(Pageable pageable);
+
+    UserDto updateUser(Long id, UserDto dto);
+
+    UserDto getUserById(Long id);
+
+    String deleteUserById(Long id);
+
+    List<UserDto> searchByName(String name);
 
 }
 ```
 
-## Create StudentService interface and StudentServiceImpl class in Service package.
-
-### *StudentService*
-```
-public interface StudentService {
-
-    // create Student
-    public StudentDto createStudent(StudentDto dto);
-
-    // get All student Details
-    public List<StudentDto> getAllStudent();
-
-    // get All student in page Format
-    public Page<StudentDto> getAllStudentPage(Pageable pageable);
-
-    // get single Student details
-    public StudentDto getStudent(Long id);
-
-    // Update Student Details
-    public StudentDto updateStudent(Long id, StudentDto dto);
-
-    // Delete Student Details
-    public StudentDto deleteStudent(Long id);
-
-    // Search Student details using name
-    public List<StudentDto> searchByName(String name);
-
-}
-```
-
-### *StudentServiceImpl*
-```
+### *UserServiceImpl*
+```java
 @Service
-public class StudentServiceImpl implements StudentService {
-    private StudentRepository studentRepository;
+public class UserServiceImpl implements UserService {
 
-    public StudentServiceImpl(StudentRepository studentRepository) {
-        this.studentRepository = studentRepository;
-    }
+    @Autowired
+    private UserRepository repository;
 
-    // map to dto
-    private StudentDto mapTODto(Student student) {
-        StudentDto dto = new StudentDto();
-        dto.setId(student.getId());
-        dto.setFullName(student.getFullName());
-        dto.setEmail(student.getEmail());
-        dto.setPassword(student.getPassword());
-        dto.setMobile(student.getMobile());
-        dto.setGender(student.getGender());
-        dto.setAge(student.getAge());
+    @Override
+    public UserDto createUser(User user) {
+        if (repository.existsByEmail(user.getEmail()))
+            throw new  IllegalArgumentException("User email already exist.");
+        if (repository.existsByMobile(user.getMobile()))
+            throw new  IllegalArgumentException("User Mobile no. already exist.");
+        User saveUser = repository.save(user);
+        UserDto dto = mapToDto(saveUser);
         return dto;
     }
 
-    // map to Entity
-    private Student mapToEntity(StudentDto dto) {
-        Student student = new Student();
-        student.setId(dto.getId());
-        student.setFullName(dto.getFullName());
-        student.setEmail(dto.getEmail());
-        student.setPassword(dto.getPassword());
-        student.setMobile(dto.getMobile());
-        student.setGender(dto.getGender());
-        student.setAge(dto.getAge());
-        return student;
+    @Override
+    public Page<UserDto> getAllUser(Pageable pageable) {
+        Page<User> userPage = repository.findAll(pageable);
+        List<UserDto> userDtoList = userPage.getContent().stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+        return new PageImpl<>(userDtoList, pageable, userPage.getTotalPages());
     }
 
     @Override
-    public StudentDto createStudent(StudentDto dto) {
-        Student student = new Student();
-        student.setId(dto.getId());
-        student.setFullName(dto.getFullName());
-        student.setEmail(dto.getEmail());
-        student.setPassword(dto.getPassword());
-        student.setGender(dto.getGender());
-        student.setAge(dto.getAge());
-        student.setMobile(dto.getMobile());
+    public UserDto updateUser(Long id, UserDto dto) {
+        User user = repository.findById(id).orElseThrow(() -> new ResourceNotFoundError("Record Not found"));
+        user.setFullName(dto.getFullName());
+        user.setEmail(dto.getEmail());
+        user.setMobile(dto.getMobile());
+        user.setGender(dto.getGender());
+        user.setAge(dto.getAge());
+        repository.save(user);
 
-        if (studentRepository.existsByEmail(dto.getEmail())) {
-            throw new IllegalArgumentException("User email already exist.");
+        UserDto userdto = mapToDto(user);
+        return userdto;
+    }
+
+    @Override
+    public UserDto getUserById(Long id) {
+        User user = repository.findById(id).orElseThrow(() -> new ResourceNotFoundError("Record not found"));
+        UserDto dto = mapToDto(user);
+        return dto;
+    }
+
+    @Override
+    public String deleteUserById(Long id) {
+        User user = repository.findById(id).orElseThrow(() -> new ResourceNotFoundError("Record Not found"));
+        repository.delete(user);
+        return "User Delete Successfully";
+    }
+
+    @Override
+    public List<UserDto> searchByName(String name) {
+        List<User> byFullNameContainingIgnoreCase = repository.findByFullNameContainingIgnoreCase(name);
+        List<UserDto> userDtoList = byFullNameContainingIgnoreCase.stream().map(u -> mapToDto(u)).collect(Collectors.toList());
+        return userDtoList;
+    }
+
+    // dto to entity
+    private UserDto mapToDto(User user){
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setFullName(user.getFullName());
+        dto.setEmail(user.getEmail());
+        dto.setMobile(user.getMobile());
+        dto.setAge(user.getAge());
+        dto.setGender(user.getGender());
+        return dto;
+    }
+
+    // entity to dto
+    private User mapToEntity(UserDto dto){
+        User user = new User();
+        user.setId(dto.getId());
+        user.setFullName(dto.getFullName());
+        user.setEmail(dto.getEmail());
+        user.setMobile(dto.getMobile());
+        user.setAge(dto.getAge());
+        user.setGender(dto.getGender());
+        return user;
+    }
+    
+}
+```
+
+### Create User Controller class inside the Controller Package.
+### *User Controller*
+```java
+@RestController
+@RequestMapping("/api/user")
+public class UserController {
+
+    @Autowired
+    private UserService service;
+
+    // url pattern: localhost:8081/api/user
+    @PostMapping
+    public ResponseEntity<?> CreateUser(@Valid @RequestBody User user) {
+        try {
+            UserDto dto = service.createUser(user);
+            return new ResponseEntity<>(dto, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+
         }
-        if (studentRepository.existsByMobile(dto.getMobile())) {
-            throw new IllegalArgumentException("User Mobile no. already exist.");
+    }
+
+    // url pattern: localhost:8081/api/user
+    // url pattern: localhost:8081/api/user?page=0
+    // url pattern: http://localhost:8081/api/user?page=0&size=2
+    @GetMapping
+    public ResponseEntity<Page<UserDto>> getAllStates(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "2") int size) {
+        Page<UserDto> states = service.getAllUser(PageRequest.of(page, size));
+        return ResponseEntity.ok(states);
+    }
+
+    // url pattern: localhost:8081/api/user/8
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UserDto dto) {
+
+        UserDto updatedto = service.updateUser(id, dto);
+        return new ResponseEntity<>(updatedto, HttpStatus.CREATED);
+    }
+
+    // url pattern: localhost:8081/api/user/8
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id){
+        UserDto userById = service.getUserById(id);
+        return new ResponseEntity<>(userById, HttpStatus.FOUND);
+    }
+
+    // url pattern: localhost:8081/api/user/8
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteUserById(@PathVariable Long id){
+        String msg = service.deleteUserById(id);
+        return new ResponseEntity<>(msg, HttpStatus.OK);
+    }
+
+    // url pattern: localhost:8081/api/user/search?name=s
+    // url pattern: localhost:8081/api/user/search?name=abc
+    @GetMapping("/search")
+    public ResponseEntity<List<UserDto>> searchByName (@RequestParam(required = false) String name){
+        List<UserDto> userDtos = service.searchByName(name);
+        if (userDtos.isEmpty()){
+            return ResponseEntity.noContent().build();
         }
-
-        Student saveStudent = studentRepository.save(student);
-        StudentDto studentDto = mapTODto(saveStudent);
-        return studentDto;
-    }
-
-    @Override
-    public List<StudentDto> getAllStudent() {
-        List<Student> studentList = studentRepository.findAll();
-        List<StudentDto> studentDtoList = studentList.stream().map(this::mapTODto).collect(Collectors.toUnmodifiableList());
-        return studentDtoList;
-    }
-
-    @Override
-    public Page<StudentDto> getAllStudentPage(Pageable pageable) {
-        Page<Student> studentPage = studentRepository.findAll(pageable);
-        List<StudentDto> studentDtoList = studentPage.getContent().stream().map(this::mapTODto).collect(Collectors.toList());
-        return new PageImpl<>(studentDtoList, pageable, studentPage.getTotalPages());
-    }
-
-    @Override
-    public StudentDto getStudent(Long id) {
-        Student student = studentRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Student Not Found By Id"));
-        StudentDto studentDto = mapTODto(student);
-        return studentDto;
-    }
-
-    @Override
-    public StudentDto updateStudent(Long id, StudentDto dto) {
-        Student student = studentRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Student Not Found By Id"));
-        student.setId(id);
-        student.setFullName(dto.getFullName());
-        student.setEmail(dto.getEmail());
-        student.setPassword(dto.getPassword());
-        student.setGender(dto.getGender());
-        student.setAge(dto.getAge());
-        student.setMobile(dto.getMobile());
-        Student save = studentRepository.save(student);
-        StudentDto studentDto = mapTODto(save);
-        return studentDto;
-    }
-
-    @Override
-    public StudentDto deleteStudent(Long id) {
-        Student student = studentRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Student Not Found By Id"));
-        studentRepository.deleteById(student.getId());
-        StudentDto studentDto = mapTODto(student);
-        return studentDto;
-    }
-
-    @Override
-    public List<StudentDto> searchByName(String name) {
-        List<Student> studentList = studentRepository.findByFullNameContainingIgnoreCase(name);
-        List<StudentDto> studentDtoList = studentList.stream().map(this::mapTODto).collect(Collectors.toUnmodifiableList());
-        return studentDtoList;
+        return new ResponseEntity<>(userDtos, HttpStatus.FOUND);
     }
 }
 ```
 
-##  Create ApiResponse and StudentDto class inside the Payload Package.
+##  Create User Dto and Error Dto inside the payload package.
 
-### *StudentDto* 
-```
-@Data
-public class StudentDto {
-
-    private Long id;
-
-    @NotBlank(message = "This Filed is required")
+### *UserDto* 
+```java
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserDto {
+    private  Long id;
     private String fullName;
-
-    @NotBlank(message = "This Filed is required")
-    @Email(message = "Enter the Valid mail id")
     private String email;
-
-    @NotBlank(message = "This Filed is required")
-    @Pattern(regexp = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$", message = "Password must have of minimum 8 Characters and at least one uppercase letter, one lowercase letter, one number and one special character")
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String password;
-
-    @NotNull(message = "This Filed is required")
-    @Size(min = 10, max = 10, message = "size must be 10 digits.")
-    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits Only.")
     private String mobile;
-
-    @NotNull(message = "This Filed is required")
-    @Min(18)
-    @Max(60)
     private Long age;
-
-    @NotBlank(message = "This Filed is required")
     private String gender;
 }
+```
 
-```
-### *ApiResponseDto* 
-```
+### *ErrorDto* 
+```java
 @Setter
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
-public class ApiResponse<T> {
+public class ErrorDto {
+    private String msg;
+    private LocalDate time;
+    private String uri;
 
-    private boolean success;
-    private String massage;
-    private T Data;
+    public ErrorDto(String msg, LocalDate time, String uri) {
+        this.msg = msg;
+        this.time = time;
+        this.uri = uri;
+    }
 
+    public ErrorDto() {
+    }
 }
 ```
 
+### *Create ApplicationException and ResourceNotFoundError inside the GloableException package.* 
 
-### *Create GlobalException class and UserNotFoundException class inside the GlobalException Package.* 
+### *ApplicationException* 
 
-### *GlobalException* 
-
-```
+```java
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class ApplicationException {
 
-    // General error handler
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleGeneral(Exception ex) {
-        ApiResponse<Object> response = new ApiResponse<>(false, ex.getMessage(), null);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-    }
-
-    // UserNotFoundException handler
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleUserNotFound(UserNotFoundException ex) {
-        ApiResponse<Object> response = new ApiResponse<>(false, ex.getMessage(), null);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    // IllegalArgumentException Handler
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Object>> IllegalArgumentExceptionHandle(IllegalArgumentException ex) {
-        ApiResponse<Object> response = new ApiResponse<>(false, ex.getMessage(), null);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-    }
-
-    // MethodArgumentNotValidException handler
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Object>> handlerInvalidArgument(MethodArgumentNotValidException ex) {
+    public Map<String, String> handlerInvalidArgument(MethodArgumentNotValidException ex) {
 
         Map<String, String> errorMsg = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> errorMsg.put(error.getField(), error.getDefaultMessage()));
-        ApiResponse<Object> response = new ApiResponse<>(false, "Something went wrong", errorMsg);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        return errorMsg;
+    }
+
+
+    @ExceptionHandler(ResourceNotFoundError.class)
+    public ResponseEntity<ErrorDto> ResourceNotFoundHandler(ResourceNotFoundError r, WebRequest request){
+        ErrorDto errorDto = new ErrorDto(r.getMessage(), LocalDate.now(), request.getDescription(false));
+        return new ResponseEntity<>(errorDto, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorDto> ResourceNotFoundHandler(Exception e, WebRequest request){
+        ErrorDto errorDto = new ErrorDto(e.getMessage(), LocalDate.now(), request.getDescription(false));
+        return new ResponseEntity<>(errorDto, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
 ```
 
-### *UserNotFoundException* 
-```
-public class UserNotFoundException extends RuntimeException{
-    public UserNotFoundException(String message) {
+### *ResourceNotFoundError* 
+```java
+public class ResourceNotFoundError extends  RuntimeException{
+    public ResourceNotFoundError() {
+    }
+
+    public ResourceNotFoundError(String message) {
         super(message);
     }
 }
-```
-
-### *Create StudentController class inside the Controller Package.* 
-
-```
-@RestController
-@RequestMapping("/student")
-public class StudentController {
-
-    private StudentService studentService;
-
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
-    }
-
-    //URL : http://localhost:8080/student/create
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<?>> createUser(@Valid @RequestBody StudentDto dto) {
-        StudentDto student = studentService.createStudent(dto);
-        ApiResponse<?> apiResponse = new ApiResponse<>(true, "Student saved!!!", student);
-        return ResponseEntity.status(200).body(apiResponse);
-    }
-
-    //URL : http://localhost:8080/student/all-student
-    @GetMapping("/all-student")
-    public ResponseEntity<ApiResponse<?>> getAllStudent() {
-        List<StudentDto> allStudent = studentService.getAllStudent();
-        ApiResponse<List<StudentDto>> allStudentDetails = new ApiResponse<>(true, "All student details", allStudent);
-        return ResponseEntity.status(200).body(allStudentDetails);
-    }
-
-    //URL :  http://localhost:8080/student/allstudent
-    //URL :  http://localhost:8080/student/allstudent?page=0
-    //URL : http://localhost:8080/student/allstudent?page=0&size=2
-    @GetMapping("/allstudent")
-    public ResponseEntity<ApiResponse<?>> getAllStudentPage(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "2") int size) {
-        Page<StudentDto> allStudentPage = studentService.getAllStudentPage(PageRequest.of(page, size));
-        if (!allStudentPage.isEmpty()){
-            ApiResponse<Page<StudentDto>> allStudentDetailsInPage = new ApiResponse<>(true, "All student details in page", allStudentPage);
-            return ResponseEntity.status(200).body(allStudentDetailsInPage);
-        }
-        ApiResponse<Object> noStudentDetailsInPage  = new ApiResponse<>(false, "No student Found ", null);
-        return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.NOT_FOUND.value())).body(noStudentDetailsInPage);
-    }
-
-    //URL : http://localhost:8080/student/get/3
-    @GetMapping("/get/{id}")
-    public ResponseEntity<ApiResponse<?>> getStudent(@PathVariable Long id) {
-        StudentDto student = studentService.getStudent(id);
-        ApiResponse<StudentDto> studentDtoApiResponse = new ApiResponse<>(true, "Student record by Id", student);
-        return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.ACCEPTED.value())).body(studentDtoApiResponse);
-    }
-
-    //URL : http://localhost:8080/student/update/1
-    @PutMapping("/update/{id}")
-    public ResponseEntity<ApiResponse<?>> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentDto dto) {
-        StudentDto studentDto = studentService.updateStudent(id, dto);
-        ApiResponse<StudentDto> studentDtoApiResponse = new ApiResponse<>(true, "Student record update Successfully", studentDto);
-        return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.OK.value())).body(studentDtoApiResponse);
-    }
-
-    //URL : http://localhost:8080/student/delete/6
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<ApiResponse<?>> deleteStudent(@PathVariable Long id) {
-        StudentDto student = studentService.deleteStudent(id);
-        ApiResponse<StudentDto> studentDtoApiResponse = new ApiResponse<>(true, "Student id " + student.getId() + " Delete Successfully", null);
-        return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.OK.value())).body(studentDtoApiResponse);
-    }
-
-    //URL : http://localhost:8080/student/search?name=k
-    //URL : http://localhost:8080/student/search?name=sdghs
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<?>> searchByName(@RequestParam(required = false) String name) {
-
-        List<StudentDto> studentDtos = studentService.searchByName(name);
-        if (!studentDtos.isEmpty()) {
-            ApiResponse<List<StudentDto>> studentFoundByName = new ApiResponse<>(true, "Student Found by name", studentDtos);
-            return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.FOUND.value())).body(studentFoundByName);
-        }
-        ApiResponse<Object> noStudentFoundByName = new ApiResponse<>(false, "No student Found by name", null);
-        return ResponseEntity.status(HttpStatusCode.valueOf(HttpStatus.NOT_FOUND.value())).body(noStudentFoundByName);
-    }
-}
-
-```
-
-## Configure **_Swagger Definition_** to use Api Documentation and all Controller Documentation.
-
-### *Swegger Defination*
-```
-// configure swagger OpenAPIDefinition
-@OpenAPIDefinition(
-		info = @Info(
-				title = "Crud Operations with custom Api Response",
-				version = "1.0",
-				description = "In this Api we customize Api Response.",
-				contact = @Contact(
-						name = "Kundan Kumar Chourasiya",
-						email = "mailmekundanchourasiya@gmail.com"
-				)
-		),
-		servers = @Server(
-				url = "http://localhost:8080",
-				description = "Crud Operations with custom Api Response url"
-		)
-)
 ```
 
 
@@ -555,37 +468,47 @@ public class StudentController {
 
 ### *Swagger*
 
-![image](https://github.com/user-attachments/assets/ab1b5567-08de-4994-b51a-704b97401a3f)
+![image](https://github.com/user-attachments/assets/8f997cab-d21e-4c84-825c-467d7fe0bd02)
 
 ### *PostMan Test Cases*
 
-Url - http://localhost:8080/student/create
-![image](https://github.com/user-attachments/assets/23227c38-af02-4a09-ae6f-b5f7a58a9720)
+Url - http://localhost:8081/api/user
+![image](https://github.com/user-attachments/assets/35db1777-1eb9-47d9-ba07-ca6f12601a9d)
 
-Url - http://localhost:8080/student/search?name=g
+Url - http://localhost:8081/api/user
+![image](https://github.com/user-attachments/assets/dbde9f53-ef56-4a95-975b-07fd9c2dae6a)
 
-Url - http://localhost:8080/student/search?name=Armando
-![image](https://github.com/user-attachments/assets/bae60f1d-eb55-45f1-849c-db2e78fee760)
+Url - http://localhost:8081/api/user/8
+![image](https://github.com/user-attachments/assets/22146f47-9696-487d-a94c-5b23c6ecca69)
 
-Url - http://localhost:8080/student/all-student
-![image](https://github.com/user-attachments/assets/f65d7d34-8d3c-48a4-9699-524741de0bee)
+Url - http://localhost:8081/api/user/2
+![image](https://github.com/user-attachments/assets/14e3d454-d25f-47ca-ac08-cb219766bfdb)
 
-Url - http://localhost:8080/student/get/4
-![image](https://github.com/user-attachments/assets/b6f69bc6-8a69-470c-9298-34cf62bb68d5)
+Url - http://localhost:8081/api/user/4
+![image](https://github.com/user-attachments/assets/f9dab458-a545-40d8-a1f1-606335554f17)
 
-Url - http://localhost:8080/student/update/6
-![image](https://github.com/user-attachments/assets/f094ac96-78bb-495a-a857-32906a3be89c)
 
-Url - http://localhost:8080/student/delete/6
-![image](https://github.com/user-attachments/assets/aa86df71-5145-45fd-8ad6-11eb81a176db)
+Url - http://localhost:8081/api/user/search?name=s
+
+Url - http://localhost:8081/api/user/search?name=sunny
+
+Url - http://localhost:8081/api/user/search?name=abc
+![image](https://github.com/user-attachments/assets/e7de500e-f0e2-4fe6-aed6-5b8fc2d5bb1e)
+
 
 URL :  http://localhost:8080/student/allstudent
 
 URL :  http://localhost:8080/student/allstudent?page=0
 
 URL : http://localhost:8080/student/allstudent?page=0&size=2
-![image](https://github.com/user-attachments/assets/965fa88d-de0d-4c9f-a323-2b73d9190cc4)
+![image](https://github.com/user-attachments/assets/aac515c4-826f-4243-a0fc-135dfa8ff5aa)
+
+### Filed validation
+
+Url - http://localhost:8081/api/user
+
+![image](https://github.com/user-attachments/assets/6d7fe528-99bd-4e78-8224-7146939f3b5a)
 
 
  
-![image](https://github.com/user-attachments/assets/8f997cab-d21e-4c84-825c-467d7fe0bd02)
+
