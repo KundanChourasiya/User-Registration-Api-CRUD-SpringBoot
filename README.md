@@ -1,7 +1,7 @@
 # User-Registration-Api
 
 > [!NOTE]
-> ### In this Api we make Crud opertion usiing Spring Boot RestApi.
+> ### In this Api we Create Crud opertion using Spring Boot RestApi.
 > 1. Create User Registration 
 > 2. Get User By Id
 > 3. Get All User Details
