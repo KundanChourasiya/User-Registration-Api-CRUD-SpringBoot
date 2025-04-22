@@ -1,4 +1,4 @@
-package com.api.GlobalException;
+package com.api.payload;
 
 import lombok.Getter;
 import lombok.Setter;

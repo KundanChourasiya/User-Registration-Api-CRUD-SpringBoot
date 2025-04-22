@@ -21,14 +21,6 @@ public class UserController {
     private UserService service;
 
     // url pattern: localhost:8081/api/user
-    /*{
-        "fullName":"abc",
-        "email":"abc@gmail.com",
-        "password":"abcsd@34",
-        "mobile":7673647373,
-        "age":22,
-        "gender":"M"
-    }*/
     @PostMapping
     public ResponseEntity<?> CreateUser(@Valid @RequestBody User user) {
         try {

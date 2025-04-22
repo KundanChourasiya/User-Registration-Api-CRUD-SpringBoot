@@ -1,5 +1,6 @@
 package com.api.GlobalException;
 
+import com.api.payload.ErrorDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
